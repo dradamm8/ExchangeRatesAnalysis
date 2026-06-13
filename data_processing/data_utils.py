@@ -134,6 +134,6 @@ def get_data(start_date_str, end_date_str):
 
     df_raw = download_data(start_date_str, end_date_str)
 
-    df = clean_data(df)
+    df = clean_data(df_raw)
 
     return df

@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import date, timedelta, datetime
+import requests
 
 # kody walut, które będą analizowane
 codes = ['USD', 'EUR', 'HUF', 'JPY', 'UAH', 'CZK']

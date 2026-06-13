@@ -1,20 +1,28 @@
 from database_connection.conn import *
-print("dotad")
-conn = make_connection()
-if not conn:
-    print("Nie udalo sie polaczyc!")
-else:
-    print("Polaczono!")
+from data_processing.data_utils import *
+import sys
 
-cur = conn.cursor()
 
-query = "INSERT INTO rates.testtab VALUES (3, 'pa')"
-try:
-    cur.execute(query)
-except:
-    conn.rollback()
-else:
-    conn.commit()
 
-cur.close()
-conn.close()
+def main():
+    
+
+    data = get_data("2022-02-03", "2022-05-06") 
+    print(data.head())
+    print("Jestem tu")
+    conn = make_sqlalchemy_connection()
+    if not conn:
+        print("Nie udalo sie polaczyc!")
+        sys.exit(1)
+    else:
+        print("Polaczono!")
+
+    
+   # cur = conn.cursor()
+    df_to_db(data, conn)
+
+    #cur.close()
+    conn.close()
+
+if __name__ == "__main__":
+    main()

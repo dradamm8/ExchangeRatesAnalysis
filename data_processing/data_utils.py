@@ -1,9 +1,12 @@
 import pandas as pd
 from datetime import date, timedelta, datetime
 import requests
+import json 
+from io import StringIO
+import time
 
 # kody walut, które będą analizowane
-codes = ['USD', 'EUR', 'HUF', 'JPY', 'UAH', 'CZK']
+codes = ['usd', 'eur', 'huf', 'jpy', 'uah', 'czk']
 
 
 def make_date_chunks(start_date: date, end_date: date):
@@ -56,10 +59,10 @@ def filter_rates(data, codes = codes):
         row_dict = {}
         row_dict['date'] = row['effectiveDate']
         rates = row['rates']
-        filtered_rates = [*filter(lambda x: x['code'] in codes, rates)]
+        filtered_rates = [*filter(lambda x: x['code'].lower() in codes, rates)]
     
         for rate in filtered_rates:
-            row_dict[f"{rate['code']}"] = rate['mid']
+            row_dict[f"{rate['code'].lower()}"] = rate['mid']
         
         filtered.append(row_dict)
 
@@ -118,6 +121,7 @@ def download_data(start_date_str, end_date_str):
         print("poszło!")
         time.sleep(3)
     
+    
     return df.astype("float")
 
 
@@ -135,5 +139,5 @@ def get_data(start_date_str, end_date_str):
     df_raw = download_data(start_date_str, end_date_str)
 
     df = clean_data(df_raw)
-
+    
     return df

@@ -37,5 +37,15 @@ def make_sqlalchemy_connection():
         return False
 
     
-def df_to_db(df, conn):
+def df_to_db(df):
+
+    conn = make_sqlalchemy_connection()
+    if not conn:
+        print("Nie udalo sie polaczyc!")
+        sys.exit(1)
+    else:
+        print("Polaczono!")
+
     df.to_sql("rates", conn, "rates", "append", index_label = "date")
+
+    conn.close()

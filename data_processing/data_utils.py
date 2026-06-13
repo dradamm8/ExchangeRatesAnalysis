@@ -123,7 +123,7 @@ def download_data(start_date_str, end_date_str):
         except:
             pass
             
-        print("poszło!")
+        #print("poszło!")
         time.sleep(3)
     
     
@@ -180,7 +180,7 @@ def get_data_from_db():
 
 
 if __name__ == '__main__':
-    
+
     df = get_data_from_db()
     
     print(df.head())

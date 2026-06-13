@@ -6,22 +6,10 @@ import sys
 
 def main():
     
-    data = get_data("2022-02-03", "2022-05-06") 
-    
-    print("Jestem tu")
-    conn = make_sqlalchemy_connection()
-    if not conn:
-        print("Nie udalo sie polaczyc!")
-        sys.exit(1)
-    else:
-        print("Polaczono!")
+    data = get_data("2022-01-01", "2025-05-06") 
+        
+    df_to_db(data)
 
-    
-   # cur = conn.cursor()
-    df_to_db(data, conn)
-
-    #cur.close()
-    conn.close()
 
 
 

@@ -4,6 +4,11 @@ import requests
 import json 
 from io import StringIO
 import time
+import sys
+sys.path.append("..")
+from database_connection.conn import *
+
+print(__name__)
 
 # kody walut, które będą analizowane
 codes = ['usd', 'eur', 'huf', 'jpy', 'uah', 'czk']
@@ -141,3 +146,42 @@ def get_data(start_date_str, end_date_str):
     df = clean_data(df_raw)
     
     return df
+
+def get_data_from_db():
+    
+    """
+    Funkcja do pobrania tabeli danych z bazy
+    """
+
+    conn = make_psycopg_connection()
+    if not conn:
+        print("Nie udalo sie polaczyc!")
+        sys.exit(2)
+    
+    print("Polaczono!")
+
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM rates.rates")
+
+    columns = [desc[0] for desc in cur.description]
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    df = pd.DataFrame(data, columns = columns)
+    df.set_index("date", inplace = True)
+
+    df.index = pd.to_datetime(df.index)
+    
+    return df.astype("float")    
+
+
+if __name__ == '__main__':
+    
+    df = get_data_from_db()
+    
+    print(df.head())
+    print(df.info())

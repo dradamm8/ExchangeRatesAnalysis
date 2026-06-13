@@ -6,9 +6,8 @@ import sys
 
 def main():
     
-
     data = get_data("2022-02-03", "2022-05-06") 
-    print(data.head())
+    
     print("Jestem tu")
     conn = make_sqlalchemy_connection()
     if not conn:
@@ -23,6 +22,8 @@ def main():
 
     #cur.close()
     conn.close()
+
+
 
 if __name__ == "__main__":
     main()

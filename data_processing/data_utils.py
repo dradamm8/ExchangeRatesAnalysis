@@ -11,7 +11,7 @@ from database_connection.conn import *
 print(__name__)
 
 # kody walut, które będą analizowane
-codes = ['usd', 'eur', 'huf', 'jpy', 'uah', 'czk']
+codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
 
 
 def make_date_chunks(start_date: date, end_date: date):

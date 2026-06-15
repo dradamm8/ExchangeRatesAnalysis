@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandarScaler
+from sklearn.metrics import r2_score, root_mean_squared_error
 from xgboost import XGBRegressor
 
 def prepare_data(df):
@@ -74,6 +75,13 @@ def get_features(df, code):
     return df[cols]
 
 
+def make_df_dict():
+    df_dict = {}
+    for code in codes:
+        temp = get_features(df_scaled, code)
+        df_dict[code] = temp
+
+
 def ts_train_test_split(X, y, test_size):
 
     test_size = int(len(df) * test_size)
@@ -113,3 +121,40 @@ def grid_search_best_params(df_dict):
         best_params_dict[code] = gs_cv.best_params_
 
     return best_params_dict
+
+
+def ts_cross_val_score(df_dict, best_params_dict):
+
+    cv_scores = {}
+
+    for code in codes:
+
+        curr_df = df_dict[code]
+        X = curr_df.iloc[:,1:]
+        y = curr_df.iloc[:,[0]]
+
+        X_train, X_test, y_train, y_test = ts_train_test_split(X, y, 0.2)
+        
+        model = xgb.XGBRegressor(random_state = 415151, enable_categorical = True, **best_params_dict)
+        
+        rmse = []
+        r2 = []
+        
+        tscv = TimeSeriesSplit(n_splits = 6)
+        for train_ix, test_ix in tscv.split(X_train):
+            X_train_cv = X_train.iloc[train_ix]
+            y_train_cv = y_train.iloc[train_ix]
+            X_test_cv = X_train.iloc[test_ix]
+            y_test_cv = y_train.iloc[test_ix]
+            model.fit(X_train_cv, y_train_cv)
+            y_pred_cv = model.predict(X_test_cv)
+            #print(f"RMSE: {root_mean_squared_error(y_test_cv, y_pred_cv)}\nR2: {r2_score(y_test_cv, y_pred_cv)}\n\n")
+            rmse.append(root_mean_squared_error(y_test_cv, y_pred_cv))
+            r2.append(r2_score(y_test_cv, y_pred_cv))
+
+        cv_scores[code] = {'rmse' : rmse, 'r2' : r2}
+
+    return cv_scores
+
+
+    

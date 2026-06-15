@@ -46,7 +46,7 @@ def df_to_db(df):
     else:
         print("Polaczono!")
 
-    df.to_sql("helper", conn, "rates", "append", index_label = "date")
+    df.to_sql("helper", conn, schema = "rates", if_exists = "append", index_label = "date")
 
     conn.close()
 

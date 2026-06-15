@@ -4,6 +4,7 @@ from sklearn.model_selection import TimeSeriesSplit, cross_val_score, GridSearch
 from sklearn.preprocessing import StandarScaler
 from sklearn.metrics import r2_score, root_mean_squared_error
 from xgboost import XGBRegressor
+import xgboost as xgb
 
 def prepare_data(df):
 
@@ -148,7 +149,7 @@ def ts_cross_val_score(df_dict, best_params_dict):
             y_test_cv = y_train.iloc[test_ix]
             model.fit(X_train_cv, y_train_cv)
             y_pred_cv = model.predict(X_test_cv)
-            #print(f"RMSE: {root_mean_squared_error(y_test_cv, y_pred_cv)}\nR2: {r2_score(y_test_cv, y_pred_cv)}\n\n")
+            
             rmse.append(root_mean_squared_error(y_test_cv, y_pred_cv))
             r2.append(r2_score(y_test_cv, y_pred_cv))
 
@@ -157,4 +158,34 @@ def ts_cross_val_score(df_dict, best_params_dict):
     return cv_scores
 
 
+def train_models(df_dict, best_params, train_existing = False, curr_models_dict = None):
+
+    models_dict = {}
+    test_scores_dict = {}
     
+    for code in codes:
+
+        curr_df = df_dict[code]
+        X = curr_df.iloc[:,1:]
+        y = curr_df.iloc[:,[0]]
+
+        X_train, X_test, y_train, y_test = ts_train_test_split(X, y, 0.2)
+
+        model = xgb.XGBRegressor(random_state = 415151, enable_categorical = True, **best_params_dict[code])
+
+        if train_existing:
+            curr_model = curr_models_dict[code]
+            model.fit(X_train, y_train, xgb_model = curr_model.get_booster())
+        else:
+            model.fit(X_train, y_train)
+
+        y_pred = model.predict(X_test)
+        
+        rmse = root_mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+
+        test_scores_dict[code] = {'rmse' : rmse, 'r2' : r2}
+
+        models_dict[code] = model
+
+    return models_dict, test_scores_dict

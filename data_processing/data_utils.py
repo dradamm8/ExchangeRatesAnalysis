@@ -195,7 +195,7 @@ def get_data(start_date_str, end_date_str):
 
     df = clean_data(df_raw)
     
-    return df
+    return df.asfreq("D")
 
 def get_data_for_one_day(date_str):
 
@@ -231,7 +231,7 @@ def get_data_from_db():
 
     df.index = pd.to_datetime(df.index)
     
-    return df.astype("float")    
+    return df.astype("float").asfreq("D")    
 
 
 if __name__ == '__main__':

@@ -42,10 +42,66 @@ def df_to_db(df):
     conn = make_sqlalchemy_connection()
     if not conn:
         print("Nie udalo sie polaczyc!")
-        sys.exit(1)
+        return
     else:
         print("Polaczono!")
 
-    df.to_sql("rates", conn, "rates", "append", index_label = "date")
+    df.to_sql("helper", conn, "rates", "append", index_label = "date")
 
     conn.close()
+
+    conn = make_psycopg_connection()
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    cur.execute("""
+                MERGE INTO rates.rates r
+                USING rates.helper h
+                ON r.date = h.date
+                WHEN MATCHED THEN DO NOTHING
+                WHEN NOT MATCHED THEN INSERT VALUES 
+                    (h.date, h.usd, h.eur, h.huf, h.uah, h.jpy, h.czk);
+                """)
+
+    cur.execute("""
+                DELETE FROM rates.helper;
+                """)
+
+    cur.close()
+    conn.close()
+
+
+    
+
+def check_date_range_in_db():
+    conn = make_psycopg_connection()
+    if not conn:
+        print("Nie udalo sie polaczyc!")
+        return
+    else:
+        print("Polaczono!")
+
+    cur = conn.cursor()
+    cur.execute("""
+                SELECT date FROM rates.rates
+                ORDER BY date ASC
+                LIMIT 1;
+                """)
+
+    first_date = cur.fetchone()[0]
+
+    cur.execute("""
+                SELECT date FROM rates.rates
+                ORDER BY date DESC
+                LIMIT 1;
+                """)
+
+    last_date = cur.fetchone()[0]
+
+    cur.close()
+    conn.close()
+
+    first_date = first_date.strftime("%Y-%m-%d")
+    last_date = last_date.strftime("%Y-%m-%d")
+    return first_date, last_date

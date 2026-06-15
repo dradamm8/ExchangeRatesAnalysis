@@ -1,7 +1,7 @@
 import numpy as np 
 import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score, GridSearchCV
-from sklearn.preprocessing import StandarScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, root_mean_squared_error
 from xgboost import XGBRegressor
 import xgboost as xgb
@@ -11,10 +11,12 @@ sys.path.append("..")
 from database_connection.conn import *
 import json
 import datetime
+from statsmodels.tsa.seasonal import STL
+
 
 # kody walut, które będą analizowane
 codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
-
+codes_upp = ['USD', 'EUR', 'HUF', 'UAH', 'JPY', 'CZK']
 
 def prepare_data(df):
 
@@ -92,10 +94,11 @@ def make_df_dict(df_scaled):
         temp = get_features(df_scaled, code)
         df_dict[code] = temp
 
+    return df_dict
 
 def ts_train_test_split(X, y, test_size):
 
-    test_size = int(len(df) * test_size)
+    test_size = int(len(X) * test_size)
     X_train = X.iloc[:-test_size]
     X_test = X.iloc[-test_size:]
     y_train = y.iloc[:-test_size]
@@ -211,6 +214,8 @@ def get_ml_models_and_scores(df, curr_models_dict = None):
     # słownik przechowujący dane dla różnych walut
     df_dict = make_df_dict(df_to_ml)
     
+    print(df_dict)
+
     # GridSearch - najlepsze parametry
     best_params_dict = grid_search_best_params(df_dict)
 

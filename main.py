@@ -1,17 +1,21 @@
 from database_connection.conn import *
 from data_processing.data_utils import *
+from ml.ml_utils import *
 import sys
+import datetime
+# mam pobieranie danych z API, dodawanie ich do bazy i pobieranie z bazy
 
+# przygotować model ML - niech zwraca predykcje na najbliższy tydzień
+# co tydzień - dotrenowywanie modelu przy użyciu danych z tygodnia
 
 
 def main():
     
-    data = get_data("2022-01-01", "2025-05-06") 
-        
-    df_to_db(data)
+    df = get_data_from_db()
 
+    models_dict, best_params_dict, cv_scores, test_scores_dict = get_ml_models_and_scores(df)
 
-
+    print(best_params_dict)
 
 if __name__ == "__main__":
     main()

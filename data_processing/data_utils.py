@@ -8,8 +8,6 @@ import sys
 sys.path.append("..")
 from database_connection.conn import *
 
-print(__name__)
-
 # kody walut, które będą analizowane
 codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
 

@@ -2,6 +2,10 @@ import psycopg
 from dotenv import load_dotenv
 import os
 from sqlalchemy import create_engine
+import json
+import sys
+sys.path.append("..")
+from ml.ml_utils import *
 
 load_dotenv()
 
@@ -105,3 +109,30 @@ def check_date_range_in_db():
     first_date = first_date.strftime("%Y-%m-%d")
     last_date = last_date.strftime("%Y-%m-%d")
     return first_date, last_date
+
+
+    def save_models_data_to_db(best_params_dict, cv_scores):
+
+        ts = datetime.date().now()
+
+        conn = make_psycopg_connection()
+        if not conn:
+            print("Nie udalo sie polaczyc!")
+            return
+        else:
+            print("Polaczono!")
+
+        conn.autocommit = True
+
+        cur = conn.cursor()
+        
+        for code in codes:
+            params_str = json.dumps(best_params_dict[code])
+            cv_str = json.dumps(cv_scores[code])
+
+            cur.execute("""
+                        INSERT INTO model.models
+                        VALUES (%s, %s, %s, %s);
+                        """, (ts, code, params_str, cv_score))
+
+        conn.close()

@@ -6,6 +6,11 @@ from sklearn.metrics import r2_score, root_mean_squared_error
 from xgboost import XGBRegressor
 import xgboost as xgb
 import pickle
+import sys
+sys.path.append("..")
+from database_connection.conn import *
+import json
+import datetime
 
 # kody walut, które będą analizowane
 codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
@@ -220,3 +225,5 @@ def get_ml_models_and_scores(df, curr_models_dict = None):
     models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing, curr_models_dict)
 
     return models_dict, best_params_dict, cv_scores, test_scores_dict
+
+

@@ -111,28 +111,28 @@ def check_date_range_in_db():
     return first_date, last_date
 
 
-    def save_models_data_to_db(best_params_dict, cv_scores):
+def save_models_data_to_db(best_params_dict, cv_scores):
 
-        ts = datetime.date().now()
+    ts = datetime.date().now()
 
-        conn = make_psycopg_connection()
-        if not conn:
-            print("Nie udalo sie polaczyc!")
-            return
-        else:
-            print("Polaczono!")
+    conn = make_psycopg_connection()
+    if not conn:
+        print("Nie udalo sie polaczyc!")
+        return
+    else:
+        print("Polaczono!")
 
-        conn.autocommit = True
+    conn.autocommit = True
 
-        cur = conn.cursor()
+    cur = conn.cursor()
         
-        for code in codes:
-            params_str = json.dumps(best_params_dict[code])
-            cv_str = json.dumps(cv_scores[code])
+    for code in codes:
+        params_str = json.dumps(best_params_dict[code])
+        cv_str = json.dumps(cv_scores[code])
 
-            cur.execute("""
+        cur.execute("""
                         INSERT INTO model.models
                         VALUES (%s, %s, %s, %s);
                         """, (ts, code, params_str, cv_score))
 
-        conn.close()
+    conn.close()

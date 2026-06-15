@@ -115,7 +115,7 @@ def weekly_interpolate(start_date, end_date):
     
     df = pd.concat((df, temp_df))
     
-    return df.astype("float").interpolate().loc[date_range_to_interp]
+    return df.astype("float").ffill().loc[date_range_to_interp]
 
 
 def download_data(start_date_str, end_date_str):
@@ -186,7 +186,7 @@ def clean_data(data):
     Uzupełnianie braków danych - interpolacja (oraz uzupełnienie wartością następną dla braków na samym początku)
     """
 
-    return data.interpolate().bfill()
+    return data.ffill().bfill()
 
 
 def get_data(start_date_str, end_date_str):

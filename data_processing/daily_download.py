@@ -15,7 +15,7 @@ def download_and_insert_to_db():
 
     df_to_db(new_data)
 
-
+# wg strony NBP dane są udostępniane między 11.45 a 12.15 - dodany jest jeszcze dodatkowy bufor czasowy do 13.30
 schedule.every().day.at("13:30").do(download_and_insert_to_db)
 
 

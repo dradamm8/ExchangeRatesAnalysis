@@ -23,6 +23,10 @@ def make_date_chunks(start_date: date, end_date: date):
     dt = timedelta(days = 89)
     no_of_days = (end_date - start_date).days
 
+    if no_of_days == 0:
+        d = end_date.strftime(date_format)
+        return [(d, d)]
+
     # ilość okresów o największej długości
     no_of_max_chunks = no_of_days // 90
 
@@ -74,12 +78,51 @@ def filter_rates(data, codes = codes):
     return filtered
 
 
+def weekly_interpolate(start_date, end_date):
+
+    date_week_before = start_date - timedelta(days = 7)
+    date_str = date_week_before.strftime("%Y-%m-%d")
+
+    conn = make_psycopg_connection()
+    if not conn:
+        print("Nie udalo sie polaczyc!")
+        return
+    else:
+        print("Polaczono!")
+
+    cur = conn.cursor()
+
+    cur.execute("""
+                SELECT *
+                FROM rates.rates
+                WHERE date >= %s
+                """, (date_str,))
+
+    temp = cur.fetchall()
+    columns = [desc[0] for desc in cur.description]
+
+    cur.close()
+    conn.close()
+
+    df = pd.DataFrame(temp, columns = columns)
+    df.set_index("date", inplace = True)
+    
+    df.index = pd.to_datetime(df.index)
+
+    date_range_to_interp = pd.date_range(start_date, end_date)
+
+    temp_df = pd.DataFrame(index = date_range_to_interp, columns = columns[1:])
+    
+    df = pd.concat((df, temp_df))
+    
+    return df.astype("float").interpolate().loc[date_range_to_interp]
+
+
 def download_data(start_date_str, end_date_str):
 
     """
     Funkcja do pobierania danych - zwraca dataframe
     """
-    
     
     date_format = "%Y-%m-%d"
 
@@ -102,19 +145,26 @@ def download_data(start_date_str, end_date_str):
         try:
             assert resp.status_code == 200
         except:
-            print("Błąd pobierania!")
-            print(resp.status_code)
-            return
+            if resp.status_code == 404:
+                # w przypadku, gdy na dany dzień nie ma danych, to pobieram z ostatniego tygodnia i interpolacja                
+                d1_temp = datetime.strptime(d1, date_format)
+                d2_temp = datetime.strptime(d2, date_format)
 
-        data = resp.json()
+                temp = weekly_interpolate(d1_temp, d2_temp)
 
-        data = filter_rates(data)
+            else:
+                print("Błąd pobierania!")
+                print(resp.status_code)
+                return
+        else:
+            data = resp.json()
+            data = filter_rates(data)
 
-        data_str = json.dumps(data)
-        buff = StringIO(data_str)
+            data_str = json.dumps(data)
+            buff = StringIO(data_str)
 
-        temp = pd.read_json(buff, orient = "records")
-        temp.set_index("date", inplace = True)
+            temp = pd.read_json(buff, orient = "records")
+            temp.set_index("date", inplace = True)
         
         ix = temp.index.strftime(date_format)
         
@@ -146,6 +196,11 @@ def get_data(start_date_str, end_date_str):
     df = clean_data(df_raw)
     
     return df
+
+def get_data_for_one_day(date_str):
+
+    return get_data(date_str, date_str)
+
 
 def get_data_from_db():
     

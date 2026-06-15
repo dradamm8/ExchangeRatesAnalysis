@@ -5,6 +5,11 @@ from sklearn.preprocessing import StandarScaler
 from sklearn.metrics import r2_score, root_mean_squared_error
 from xgboost import XGBRegressor
 import xgboost as xgb
+import pickle
+
+# kody walut, które będą analizowane
+codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
+
 
 def prepare_data(df):
 
@@ -76,7 +81,7 @@ def get_features(df, code):
     return df[cols]
 
 
-def make_df_dict():
+def make_df_dict(df_scaled):
     df_dict = {}
     for code in codes:
         temp = get_features(df_scaled, code)
@@ -158,7 +163,7 @@ def ts_cross_val_score(df_dict, best_params_dict):
     return cv_scores
 
 
-def train_models(df_dict, best_params, train_existing = False, curr_models_dict = None):
+def train_models(df_dict, best_params_dict, train_existing = False, curr_models_dict = None):
 
     models_dict = {}
     test_scores_dict = {}
@@ -189,3 +194,29 @@ def train_models(df_dict, best_params, train_existing = False, curr_models_dict 
         models_dict[code] = model
 
     return models_dict, test_scores_dict
+
+
+def get_ml_models_and_scores(df, curr_models_dict = None):
+
+    # jeśli models_dict jest none, to model jedziemy od 0
+
+    # przygotowanie danych
+    df_to_ml = prepare_data(df)
+
+    # słownik przechowujący dane dla różnych walut
+    df_dict = make_df_dict(df_to_ml)
+    
+    # GridSearch - najlepsze parametry
+    best_params_dict = grid_search_best_params(df_dict)
+
+    # kroswalidacja z najlepszymi parametrami
+    cv_scores = ts_cross_val_score(df_dict, best_params_dict)
+
+    train_existing = True
+    if curr_models_dict is None:
+        train_existing = False
+    
+    # trenowanie modeli
+    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing, curr_models_dict)
+
+    return models_dict, best_params_dict, cv_scores, test_scores_dict

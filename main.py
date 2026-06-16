@@ -22,13 +22,17 @@ def main():
     
     df_dict = make_df_dict(df_to_ml)
     
-    best_params_dict = grid_search_best_params(df_dict, "arima")
+    models_dict = model_dict_from_pickle("arima")
+
+    # best_params_dict = grid_search_best_params(df_dict, "arima")
     
-    cv_scores_dict = ts_cross_val_score(df_dict, best_params_dict, "arima")
+    # cv_scores_dict = ts_cross_val_score(df_dict, best_params_dict, "arima")
     
-    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing = False, model_type = "arima")
+    # models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing = False, model_type = "arima")
     
-    save_models_data_to_db(best_params_dict, cv_scores_dict, test_scores_dict, "arima")
+    # save_models_data_to_db(best_params_dict, cv_scores_dict, test_scores_dict, "arima")
+
+    print(predict_data(df_dict, models_dict, "arima"))
 
 if __name__ == "__main__":
     main()

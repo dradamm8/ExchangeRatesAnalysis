@@ -204,6 +204,13 @@ def train_models(df_dict, best_params_dict, train_existing = False, curr_models_
     return models_dict, test_scores_dict
 
 
+def models_to_pickle(models_dict):
+
+    for code, model in models_dict.items():
+        filename = f"{code}_model.pkl"
+        with open(filename, "wb") as f:
+            pickle.dump(model, f)
+
 def get_ml_models_and_scores(df, curr_models_dict = None):
 
     # jeśli models_dict jest none, to model jedziemy od 0

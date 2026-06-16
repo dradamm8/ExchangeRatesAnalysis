@@ -133,13 +133,95 @@ def ts_train_test_split(X, y, test_size):
     return X_train, X_test, y_train, y_test
 
 
-def grid_search_best_params(df_dict):
+def arima_grid_search(df_dict, cv):
 
-    tscv = TimeSeriesSplit(n_splits = 6)
+    param_grid = {
+        'p': [2],
+        'd' : [2],
+        'q' : [1],
+        }
     
-    param_grid = {'max_depth' : [6,9,12],
-    'n_estimators' : [100, 300, 500],
-    'eta' : [0.1, 0.3]}
+    best_params_dict = {}
+    
+    for code in codes:
+
+        curr_df = df_dict[code]
+        X = curr_df.iloc[:,1:]
+        y = curr_df.iloc[:,[0]]
+
+        X_train, X_test, y_train, y_test = ts_train_test_split(X, y, 0.2)
+
+        p_vals = param_grid['p']
+        d_vals = param_grid['d']
+        q_vals = param_grid['q']
+    
+    
+        rmse = 1e9
+        r2 = -100
+
+        best_params = {}
+        print(f"Sprawdzam dla {code}")
+        for p in p_vals:
+            for d in d_vals:
+                for q in q_vals:
+                    
+                    rmse_arr = []
+                    r2_arr = []
+                    
+                    order = (p, d, q)
+                    print(f"Sprawdzana kombinacja: {order}")
+
+                          
+                    for train_ix, test_ix in cv.split(X_train):
+                        X_train_cv = X_train.iloc[train_ix]
+                        y_train_cv = y_train.iloc[train_ix]
+                        X_test_cv = X_train.iloc[test_ix]
+                        y_test_cv = y_train.iloc[test_ix]
+
+                        model = ARIMA(y_train_cv, X_train_cv, order = order).fit()
+                                        
+                        y_pred_cv = model.get_forecast(exog = X_test_cv, steps = len(y_test_cv)).predicted_mean
+                            
+                        rmse_arr.append(root_mean_squared_error(y_test_cv, y_pred_cv))
+                        r2_arr.append(r2_score(y_test_cv, y_pred_cv))
+
+                    rmse_arr = np.array(rmse_arr)
+                    r2_arr = np.array(r2_arr)
+                    
+                    mask = (r2_arr > 0)
+
+                    rmse_cv = rmse_arr[mask].mean()
+                    r2_cv = r2_arr[mask].mean()
+
+                    print(f"{rmse_cv=}; {r2_cv}")
+                    if rmse_cv < rmse and r2_cv > r2:
+                        rmse = rmse_cv
+                        r2 = r2_cv
+                        best_params = {'order' : order}
+
+        print(best_params)
+        print("\n\n")
+        best_params_dict[code] = best_params
+
+    return best_params_dict
+
+
+def grid_search_best_params(df_dict, model = "xgboost"):
+
+    tscv = TimeSeriesSplit(n_splits = 5)
+    
+    if model == 'arima':
+        return arima_grid_search(df_dict, tscv)
+
+    
+    param_grid = {
+        'max_depth' : [6,9,12],
+        'n_estimators' : [100, 300, 500],
+        'eta' : [0.1, 0.3],
+        'lambda' : [1, 1.5, 3],
+        'colsample_bytree' : [0.3, 0.5, 1]
+        }
+    
     
     best_params_dict = {}
     
@@ -163,7 +245,7 @@ def grid_search_best_params(df_dict):
     return best_params_dict
 
 
-def ts_cross_val_score(df_dict, best_params_dict):
+def ts_cross_val_score(df_dict, best_params_dict, model_type = "xgboost"):
 
     cv_scores_dict = {}
 
@@ -175,20 +257,31 @@ def ts_cross_val_score(df_dict, best_params_dict):
 
         X_train, X_test, y_train, y_test = ts_train_test_split(X, y, 0.2)
         
-        model = xgb.XGBRegressor(random_state = 415151, enable_categorical = True, **best_params_dict)
-        
+        if model_type == 'xgboost':
+            model = xgb.XGBRegressor(random_state = 415151, enable_categorical = True, **best_params_dict[code])
+        elif model_type == "arima":
+            model = ARIMA(y_train, X_train, **best_params_dict[code]).fit()
+
         rmse = []
         r2 = []
         
-        tscv = TimeSeriesSplit(n_splits = 6)
+        tscv = TimeSeriesSplit(n_splits = 8)
+        #y_pred_cv = 0
+
         for train_ix, test_ix in tscv.split(X_train):
+            
             X_train_cv = X_train.iloc[train_ix]
             y_train_cv = y_train.iloc[train_ix]
             X_test_cv = X_train.iloc[test_ix]
             y_test_cv = y_train.iloc[test_ix]
-            model.fit(X_train_cv, y_train_cv)
-            y_pred_cv = model.predict(X_test_cv)
             
+            
+            if model_type == 'xgboost':
+                model.fit(X_train_cv, y_train_cv)
+                y_pred_cv = model.predict(X_test_cv)
+            elif model_type == "arima":
+                y_pred_cv = model.get_forecast(exog = X_test_cv, steps = len(y_test_cv)).predicted_mean
+
             rmse.append(root_mean_squared_error(y_test_cv, y_pred_cv))
             r2.append(r2_score(y_test_cv, y_pred_cv))
 
@@ -197,7 +290,7 @@ def ts_cross_val_score(df_dict, best_params_dict):
     return cv_scores_dict
 
 
-def train_models(df_dict, best_params_dict, train_existing = True):
+def train_models(df_dict, best_params_dict, train_existing = True, model_type = "xgboost"):
 
     models_dict = {}
     test_scores_dict = {}
@@ -210,16 +303,23 @@ def train_models(df_dict, best_params_dict, train_existing = True):
 
         X_train, X_test, y_train, y_test = ts_train_test_split(X, y, 0.2)
 
-        model = xgb.XGBRegressor(random_state = 415151, enable_categorical = True, **best_params_dict[code])
+        if model_type == "xgboost":
+            model = xgb.XGBRegressor(enable_categorical = True, **best_params_dict[code])
 
-        if train_existing and model_exists():
-            curr_model = pickle.load(f"{os.getenv("MODELS_DIR")}{code}_model.pkl")
-            model.fit(X_train, y_train, xgb_model = curr_model.get_booster())
-        else:
-            model.fit(X_train, y_train)
+            if train_existing and model_exists():
+                with open(f"{os.getenv("MODELS_DIR")}{code}_model.pkl", "rb") as f:
+                    curr_model = pickle.load(f)
+                    model.fit(X_train, y_train, xgb_model = curr_model.get_booster())
+            else:
+                model.fit(X_train, y_train)
 
-        y_pred = model.predict(X_test)
-        
+            y_pred = model.predict(X_test)
+
+        elif model_type == "arima":
+            model = ARIMA(y_train, X_train, **best_params_dict[code]).fit()
+            y_pred = model.get_forecast(exog = X_test, steps = len(X_test)).predicted_mean
+
+
         rmse = root_mean_squared_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
 
@@ -238,8 +338,7 @@ def train_models(df_dict, best_params_dict, train_existing = True):
 
 def get_ml_models_and_scores(df, curr_models_dict = None):
 
-    # jeśli models_dict jest none, to model jedziemy od 0
-
+    
     # przygotowanie danych
     df_to_ml = prepare_data(df)
 
@@ -311,7 +410,7 @@ def make_arima_forecasts(X, extra_dates):
     return pd.concat((X, X_final))
 
 
-def predict_data(df_dict, models_dict):
+def predict_data(df_dict, models_dict, model = "xgboost"):
 
     # po jednej wartości - przewidywanie po jednej dacie naraz
     # ta wymodelowana wartość posłuży potem do modelowania kolejnych
@@ -363,7 +462,11 @@ def predict_data(df_dict, models_dict):
             
             row = X.loc[[date]]
             
-            y_predicted_for_date = model.predict(row)
+            if model == 'xgboost':
+                y_predicted_for_date = model.predict(row)
+            elif model == "arima":
+                y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean
+
             y_temp.loc[date] = y_predicted_for_date
             
             if date != extra_dates[-1]:

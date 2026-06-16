@@ -410,7 +410,7 @@ def make_arima_forecasts(X, extra_dates):
     return pd.concat((X, X_final))
 
 
-def predict_data(df_dict, models_dict, model = "xgboost"):
+def predict_data(df_dict, models_dict, model_type = "xgboost"):
 
     # po jednej wartości - przewidywanie po jednej dacie naraz
     # ta wymodelowana wartość posłuży potem do modelowania kolejnych
@@ -462,9 +462,9 @@ def predict_data(df_dict, models_dict, model = "xgboost"):
             
             row = X.loc[[date]]
             
-            if model == 'xgboost':
+            if model_type == 'xgboost':
                 y_predicted_for_date = model.predict(row)
-            elif model == "arima":
+            elif model_type == "arima":
                 y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean
 
             y_temp.loc[date] = y_predicted_for_date

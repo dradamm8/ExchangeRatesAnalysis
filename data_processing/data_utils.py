@@ -200,6 +200,25 @@ def get_data_for_one_day(date_str):
     return get_data(date_str, date_str)
 
 
+def inv_transform(df_dict, pred_dict, org_data):
+
+    means = org_data.mean().values.flatten()
+    stds = org_data.std().values.flatten()
+
+    inv_dict = {}
+    
+    for m, s, code in zip(means, stds, codes):
+        temp_pred = pred_dict[code]
+        temp_df = df_dict[code].iloc[:, [0]]
+        temp = pd.concat((temp_df, temp_pred))
+
+        temp = s * temp + m
+
+        inv_dict[code] = temp
+
+    return inv_dict
+
+
 def get_data_from_db():
     
     """

@@ -26,10 +26,10 @@ def create_directory_for_models(path):
 
 
 
-def models_to_pickle(models_dict, path):
+def models_to_pickle(models_dict):
 
     for code, model in models_dict.items():
-        filename = f"{code}_model.pkl"
+        filename = f"{os.getenv("MODELS_DIR")}{code}_model.pkl"
         with open(filename, "wb") as f:
             pickle.dump(model, f)
 
@@ -221,7 +221,9 @@ def train_models(df_dict, best_params_dict, train_existing = True):
 
         models_dict[code] = model
 
-    models_to_pickle(models_dict, os.getenv("MODELS_DIR"))
+    if not model_exists():
+        create_directory_for_models(os.getenv("MODELS_DIR"))
+    models_to_pickle(models_dict)
     return models_dict, test_scores_dict
 
 
@@ -250,10 +252,24 @@ def get_ml_models_and_scores(df, curr_models_dict = None):
         train_existing = False
     
     # trenowanie modeli
-    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing, curr_models_dict)
+    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing)
 
     return models_dict, best_params_dict, cv_scores, test_scores_dict
 
+def model_dict_from_pickle():
+
+    model_dict = {}
+
+    for code in codes:
+
+        path = os.getenv("MODELS_DIR") + "_" + code + "_model.pkl"
+
+        with open(path, "rb") as f:
+            model = pickle.load(f)
+
+        model_dict[code] = model
+
+    return model_dict
 
 def predict_data(df_dict, models_dict):
 

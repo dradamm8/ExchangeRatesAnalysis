@@ -112,7 +112,7 @@ def check_date_range_in_db():
 
 def save_models_data_to_db(best_params_dict, cv_scores):
 
-    ts = datetime.date().now()
+    ts = datetime.datetime.now()
 
     conn = make_psycopg_connection()
     if not conn:
@@ -132,6 +132,6 @@ def save_models_data_to_db(best_params_dict, cv_scores):
         cur.execute("""
                         INSERT INTO model.models
                         VALUES (%s, %s, %s, %s);
-                        """, (ts, code, params_str, cv_score))
+                        """, (ts, code, params_str, cv_str))
 
     conn.close()

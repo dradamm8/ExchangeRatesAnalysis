@@ -478,7 +478,6 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
             if model_type == 'xgboost':
                 y_predicted_for_date = model.predict(row)
             elif model_type == "arima":
-                print(row.columns[np.isnan(row.values).flatten()])
                 y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean.values[0]
                 
                 

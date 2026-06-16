@@ -28,10 +28,10 @@ def create_directory_for_models(path):
 
 
 
-def models_to_pickle(models_dict):
+def models_to_pickle(models_dict, model_type = "xgboost"):
 
     for code, model in models_dict.items():
-        filename = f"{os.getenv("MODELS_DIR")}{code}_model.pkl"
+        filename = f"{os.getenv("MODELS_DIR")}{code}_{model_type}_model.pkl"
         with open(filename, "wb") as f:
             pickle.dump(model, f)
 
@@ -101,17 +101,24 @@ def prepare_data(df):
     df_scaled['month'] = df.index.month.astype("category")
     df_scaled['day'] = df.index.day.astype("category")
     df_scaled['quarter'] = df.index.quarter.astype("category")
+    df_scaled['weekday'] = df.index.dayofweek.astype("category")
+    
+    df_scaled = pd.get_dummies(df_scaled, columns = ['month', 'day', 'quarter', 'weekday'], drop_first = True)
+    
+    print(len(df_scaled.columns))
 
-    return df_scaled
+    return df_scaled.astype(float)
+
 
 def get_features(df, code):
     
     cols = df.columns.tolist()
+    datetime_cols = cols[-50:]
     code = code.lower()
 
-    cols = [*filter(lambda x: (code in x) or (x in ['month', 'day', 'quarter']), cols)]
+    cols = [*filter(lambda x: code in x, cols)]
 
-    return df[cols]
+    return df[cols + datetime_cols]
 
 
 def make_df_dict(df_scaled):
@@ -119,7 +126,7 @@ def make_df_dict(df_scaled):
     for code in codes:
         temp = get_features(df_scaled, code)
         df_dict[code] = temp
-
+    
     return df_dict
 
 def ts_train_test_split(X, y, test_size):
@@ -300,7 +307,7 @@ def train_models(df_dict, best_params_dict, train_existing = True, model_type = 
         curr_df = df_dict[code]
         X = curr_df.iloc[:,1:]
         y = curr_df.iloc[:,[0]]
-
+        print(len(curr_df.columns))
         X_train, X_test, y_train, y_test = ts_train_test_split(X, y, 0.2)
 
         if model_type == "xgboost":
@@ -326,17 +333,20 @@ def train_models(df_dict, best_params_dict, train_existing = True, model_type = 
         test_scores_dict[code] = {'rmse' : rmse, 'r2' : r2}
 
         models_dict[code] = model
+        print(f"{code} : {len(X)}")
+
 
     if not model_exists():
         create_directory_for_models(os.getenv("MODELS_DIR"))
-    models_to_pickle(models_dict)
+
+    models_to_pickle(models_dict, model_type)
 
     return models_dict, test_scores_dict
 
 
 
 
-def get_ml_models_and_scores(df, curr_models_dict = None):
+def get_ml_models_and_scores(df, curr_models_dict = None, model_type = "xgboost"):
 
     
     # przygotowanie danych
@@ -348,27 +358,27 @@ def get_ml_models_and_scores(df, curr_models_dict = None):
     print(df_dict)
 
     # GridSearch - najlepsze parametry
-    best_params_dict = grid_search_best_params(df_dict)
+    best_params_dict = grid_search_best_params(df_dict, model_type = model_type)
 
     # kroswalidacja z najlepszymi parametrami
-    cv_scores = ts_cross_val_score(df_dict, best_params_dict)
+    cv_scores = ts_cross_val_score(df_dict, best_params_dict, model_type = model_type)
 
     train_existing = True
     if curr_models_dict is None:
         train_existing = False
     
     # trenowanie modeli
-    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing)
+    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing, model_type)
 
     return models_dict, best_params_dict, cv_scores, test_scores_dict
 
-def model_dict_from_pickle():
+def model_dict_from_pickle(model_type = "xgboost"):
 
     model_dict = {}
 
     for code in codes:
 
-        path = os.getenv("MODELS_DIR") + code + "_model.pkl"
+        path = os.getenv("MODELS_DIR") + code + f"_{model_type}" +"_model.pkl"
 
         with open(path, "rb") as f:
             model = pickle.load(f)
@@ -417,17 +427,18 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
     
     predictions_dict = {}
     dt1 = datetime.timedelta(days = 1)
-    dt2 = datetime.timedelta(days = 30)
+    dt2 = datetime.timedelta(days = 16)
     
     for code in codes:
 
         curr_df = df_dict[code]
         model = models_dict[code]
         
+
         last_date = curr_df.index[-1]
         extra_dates = pd.date_range(last_date + dt1, last_date + dt2)
 
-        X = curr_df.iloc[:,1:]
+        X = curr_df.iloc[:,1:-50]
         y = curr_df.iloc[:,[0]]
 
         y_temp = pd.DataFrame(columns = y.columns, index = extra_dates)
@@ -442,7 +453,9 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
         # nany na końcu uzupełniamy tymi przesunięciami, a wcześniejsze - tym co było
         for lag_col, lag in zip(lag_cols, [1,5,6,7]):
             colname = X.columns[lag_col]
-            X.loc[extra_dates, colname] = y_temp.shift(lag).loc[extra_dates].values
+            #print(X.loc[extra_dates, colname])
+            #print(y_temp.shift(lag).loc[extra_dates].values)
+            X.loc[extra_dates, colname] = y_temp.shift(lag).loc[extra_dates].values.flatten()
             
         X.iloc[:8] = curr_df.iloc[:8, 1:]
         
@@ -450,9 +463,9 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
         X['month'] = X.index.month.astype("category")
         X['day'] = X.index.day.astype("category")
         X['quarter'] = X.index.quarter.astype("category")
+        X['weekday'] = X.index.dayofweek.astype("category")
 
-        for col in X.columns[:-3]:
-            X[col] = X[col].astype(float)
+        X = pd.get_dummies(X, columns = ['month', 'day', 'quarter', 'weekday'], drop_first= True).astype(float)
         
         # teraz przewidywać WIERSZ PO WIERSZU - DATA PO DACIE
         # po tym mogę użyć wartości przewidzianych i uzupełniać kolejne lagi i przewidywać kolejne wartości
@@ -465,7 +478,6 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
             if model_type == 'xgboost':
                 y_predicted_for_date = model.predict(row)
             elif model_type == "arima":
-                
                 y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean
                 
                 

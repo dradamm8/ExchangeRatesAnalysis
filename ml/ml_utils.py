@@ -12,11 +12,31 @@ from database_connection.conn import *
 import json
 import datetime
 from statsmodels.tsa.seasonal import STL
-
+import os
 
 # kody walut, które będą analizowane
 codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
 codes_upp = ['USD', 'EUR', 'HUF', 'UAH', 'JPY', 'CZK']
+
+
+def create_directory_for_models(path):
+    
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+
+def models_to_pickle(models_dict, path):
+
+    for code, model in models_dict.items():
+        filename = f"{code}_model.pkl"
+        with open(filename, "wb") as f:
+            pickle.dump(model, f)
+
+
+def model_exists():
+    return os.path.exists(os.getenv("MODELS_DIR"))
+
 
 def prepare_data(df):
 
@@ -171,7 +191,7 @@ def ts_cross_val_score(df_dict, best_params_dict):
     return cv_scores
 
 
-def train_models(df_dict, best_params_dict, train_existing = False, curr_models_dict = None):
+def train_models(df_dict, best_params_dict, train_existing = True):
 
     models_dict = {}
     test_scores_dict = {}
@@ -186,8 +206,8 @@ def train_models(df_dict, best_params_dict, train_existing = False, curr_models_
 
         model = xgb.XGBRegressor(random_state = 415151, enable_categorical = True, **best_params_dict[code])
 
-        if train_existing:
-            curr_model = curr_models_dict[code]
+        if train_existing and model_exists():
+            curr_model = pickle.load(f"{os.getenv("MODELS_DIR")}{code}_model.pkl")
             model.fit(X_train, y_train, xgb_model = curr_model.get_booster())
         else:
             model.fit(X_train, y_train)
@@ -201,15 +221,11 @@ def train_models(df_dict, best_params_dict, train_existing = False, curr_models_
 
         models_dict[code] = model
 
+    models_to_pickle(models_dict, os.getenv("MODELS_DIR"))
     return models_dict, test_scores_dict
 
 
-def models_to_pickle(models_dict):
 
-    for code, model in models_dict.items():
-        filename = f"{code}_model.pkl"
-        with open(filename, "wb") as f:
-            pickle.dump(model, f)
 
 def get_ml_models_and_scores(df, curr_models_dict = None):
 

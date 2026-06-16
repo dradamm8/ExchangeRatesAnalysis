@@ -11,11 +11,15 @@ import datetime
 
 def main():
     
+    load_dotenv()
+
     df = get_data_from_db()
 
     models_dict, best_params_dict, cv_scores, test_scores_dict = get_ml_models_and_scores(df)
 
     print(best_params_dict)
+
+    save_models_data_to_db(best_params_dict, cv_scores)
 
 if __name__ == "__main__":
     main()

@@ -7,7 +7,6 @@ import sys
 sys.path.append("..")
 from ml.ml_utils import *
 
-load_dotenv()
 
 def make_psycopg_connection():
     user = os.getenv("DBUSER")

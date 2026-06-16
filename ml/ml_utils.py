@@ -13,6 +13,8 @@ import json
 import datetime
 from statsmodels.tsa.seasonal import STL
 import os
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 # kody walut, które będą analizowane
 codes = ['usd', 'eur', 'huf', 'uah', 'jpy', 'czk']
@@ -276,9 +278,47 @@ def model_dict_from_pickle():
 
     return model_dict
 
+
+def make_arima_forecasts(X, extra_dates):
+    # arima i sarimax trenowane na 3 miesięcznych danych
+    # przewidywania na 2 tygodnie
+    
+    # arima dla trendu, reszt, okien
+    # sarimax dla sezonowosci
+
+    arima_cols = [0, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    sarimax_col = 1
+
+    last_date = X.index[-1]
+
+    X_for_training = X.iloc[-90:, arima_cols + [sarimax_col]]
+
+    X_final = pd.DataFrame(index = extra_dates, columns = X.columns)
+    
+    for col in X_for_training.columns[:-1]:
+
+        arima_model = ARIMA(X_for_training.loc[:,col], order = (2,2,1), enforce_stationarity = False).fit()
+        forecasts = arima_model.get_forecast(steps = 14).predicted_mean
+
+        X_final.loc[extra_dates, col] = forecasts.values
+
+
+    sarimax_model = SARIMAX(X_for_training.iloc[:,-1], order = (1,1,0), seasonal_order = (0,1,0,30)).fit()
+    sarimax_forecasts = sarimax_model.get_forecast(steps = 14).predicted_mean
+   
+    X_final.iloc[:, sarimax_col] = sarimax_forecasts.values
+    
+    return pd.concat((X, X_final))
+
+
 def predict_data(df_dict, models_dict):
 
+    # po jednej wartości - przewidywanie po jednej dacie naraz
+    # ta wymodelowana wartość posłuży potem do modelowania kolejnych
+    
     predictions_dict = {}
+    dt1 = datetime.timedelta(days = 1)
+    dt2 = datetime.timedelta(days = 14)
     
     for code in codes:
 
@@ -286,42 +326,55 @@ def predict_data(df_dict, models_dict):
         model = models_dict[code]
         
         last_date = curr_df.index[-1]
-        extra_dates = pd.date_range(last_date, last_date + datetime.timedelta(days = 14))
+        extra_dates = pd.date_range(last_date + dt1, last_date + dt2)
 
-        temp_df = pd.DataFrame(index = extra_dates, columns = curr_df.columns)
+        X = curr_df.iloc[:,1:]
+        y = curr_df.iloc[:,[0]]
 
-        temp_df = pd.concat((curr_df, temp_df))
-
-        X = temp_df.iloc[:,1:]
-        y = temp_df.iloc[:,[0]]
+        y_temp = pd.DataFrame(columns = y.columns, index = extra_dates)
+        y_temp = pd.concat((y, y_temp))
         
+        # arima i sarimax dla trendu, sezonowości i zmiennych w oknach
+        X = make_arima_forecasts(X, extra_dates)
+
         # wybór zmiennych, gdzie jest shift
-        lag_cols = [*filter(lambda x: 'lag' in x, list(temp_df.columns))]
+        lag_cols = [3,4,5,6]
 
-        for lag_col, lag in zip(lag_cols, [1,5,6,7]):
-            X[lag_col] = y.shift(lag)
-
-
-        # print(X.iloc[:8])
-        # print("===========")
-        # print(temp_df.iloc[:8, :-3])
         # nany na końcu uzupełniamy tymi przesunięciami, a wcześniejsze - tym co było
-        X.iloc[:8] = temp_df.iloc[:8, 1:]
-
-    
-
+        for lag_col, lag in zip(lag_cols, [1,5,6,7]):
+            colname = X.columns[lag_col]
+            X.loc[extra_dates, colname] = y_temp.shift(lag).loc[extra_dates].values
+            
+        X.iloc[:8] = curr_df.iloc[:8, 1:]
+        
         # cechy czasowe
         X['month'] = X.index.month.astype("category")
         X['day'] = X.index.day.astype("category")
         X['quarter'] = X.index.quarter.astype("category")
 
-        # reszta - interpolacja
-        X.iloc[:,:-3] = X.iloc[:,:-3].interpolate()
-        print(X)
-        X_to_pred = X.loc[extra_dates]
+        for col in X.columns[:-3]:
+            X[col] = X[col].astype(float)
+        
+        
+        # teraz przewidywać WIERSZ PO WIERSZU - DATA PO DACIE
+        # po tym mogę użyć wartości przewidzianych i uzupełniać kolejne lagi i przewidywać kolejne wartości
 
-        y_pred = model.predict(X_to_pred)
+        for date in extra_dates:
+            
+            row = X.loc[[date]]
+            
+            y_predicted_for_date = model.predict(row)
+            y_temp.loc[date] = y_predicted_for_date
+            
+            if date != extra_dates[-1]:
+                for lag_col, lag in zip(lag_cols, [1,5,6,7]):
+                    colname = X.columns[lag_col]
+                    X.loc[date + dt, colname] = y_temp.shift(lag).loc[date + dt].values[0]
+                    
+            else:
+                print(X.iloc[-16:])
 
-        predictions_dict[code] = y_pred
-
+        predictions_dict[code] = y_temp
+        
+        
     return predictions_dict

@@ -232,3 +232,46 @@ def get_ml_models_and_scores(df, curr_models_dict = None):
     return models_dict, best_params_dict, cv_scores, test_scores_dict
 
 
+def predict_data(df_dict, models_dict):
+
+    predictions_dict = {}
+    
+    for code in codes:
+
+        curr_df = df_dict[code]
+        model = models_dict[code]
+        
+        last_date = curr_df.index[-1]
+        extra_dates = pd.date_range(last_date, last_date + timedelta(days = 14))
+
+        temp_df = pd.DataFrame(index = extra_dates, columns = curr_df.columns)
+
+        temp_df = pd.concat((curr_df, temp_df))
+
+        X = temp_df.iloc[:,1:]
+        y = temp_df.iloc[:,[0]]
+        
+        # wybór zmiennych, gdzie jest shift
+        lag_cols = [*filter(lambda x: 'lag' in x, list(temp_df.columns))]
+
+        for lag_col, lag in zip(lag_cols, [1,5,6,7]):
+            X[lag_col] = y.shift(lag)
+
+        # nany na końcu uzupełniamy tymi przesunięciami, a wcześniejsze - tym co było
+        X.iloc[:8] = temp_df.iloc[:8]
+
+        # cechy czasowe
+        X['month'] = X.index.month.astype("category")
+        X['day'] = X.index.day.astype("category")
+        X['quarter'] = X.index.quarter.astype("category")
+
+        # reszta - interpolacja
+        X = X.interpolate()
+
+        X_to_pred = X.loc[extra_dates]
+
+        y_pred = model.predict(X_to_pred)
+
+        predictions_dict[code] = y_pred
+
+    return predictions_dict

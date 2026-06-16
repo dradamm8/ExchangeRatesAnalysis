@@ -165,7 +165,7 @@ def grid_search_best_params(df_dict):
 
 def ts_cross_val_score(df_dict, best_params_dict):
 
-    cv_scores = {}
+    cv_scores_dict = {}
 
     for code in codes:
 
@@ -192,9 +192,9 @@ def ts_cross_val_score(df_dict, best_params_dict):
             rmse.append(root_mean_squared_error(y_test_cv, y_pred_cv))
             r2.append(r2_score(y_test_cv, y_pred_cv))
 
-        cv_scores[code] = {'rmse' : rmse, 'r2' : r2}
+        cv_scores_dict[code] = {'rmse' : rmse, 'r2' : r2}
 
-    return cv_scores
+    return cv_scores_dict
 
 
 def train_models(df_dict, best_params_dict, train_existing = True):

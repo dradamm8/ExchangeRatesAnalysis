@@ -110,7 +110,7 @@ def check_date_range_in_db():
     return first_date, last_date
 
 
-def save_models_data_to_db(best_params_dict, cv_scores):
+def save_models_data_to_db(best_params_dict, cv_scores_dict, test_scores_dict):
 
     ts = datetime.datetime.now()
 
@@ -124,14 +124,14 @@ def save_models_data_to_db(best_params_dict, cv_scores):
     conn.autocommit = True
 
     cur = conn.cursor()
-        
+    
     for code in codes:
         params_str = json.dumps(best_params_dict[code])
-        cv_str = json.dumps(cv_scores[code])
-
+        cv_str = json.dumps(cv_scores_dict[code])
+        test_scores_str = json.dumps(test_scores_dict[code])
         cur.execute("""
                         INSERT INTO model.models
-                        VALUES (%s, %s, %s, %s);
-                        """, (ts, code, params_str, cv_str))
+                        VALUES (%s, %s, %s, %s, %s);
+                        """, (ts, code, params_str, cv_str, test_scores_str))
 
     conn.close()

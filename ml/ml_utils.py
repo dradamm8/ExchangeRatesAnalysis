@@ -397,13 +397,13 @@ def make_arima_forecasts(X, extra_dates):
     for col in X_for_training.columns[:-1]:
 
         arima_model = ARIMA(X_for_training.loc[:,col], order = (2,2,1), enforce_stationarity = False).fit()
-        forecasts = arima_model.get_forecast(steps = 14).predicted_mean
+        forecasts = arima_model.get_forecast(steps = len(extra_dates)).predicted_mean
 
         X_final.loc[extra_dates, col] = forecasts.values
 
 
     sarimax_model = SARIMAX(X_for_training.iloc[:,-1], order = (1,1,0), seasonal_order = (0,1,0,30)).fit()
-    sarimax_forecasts = sarimax_model.get_forecast(steps = 14).predicted_mean
+    sarimax_forecasts = sarimax_model.get_forecast(steps = len(extra_dates)).predicted_mean
    
     X_final.iloc[:, sarimax_col] = sarimax_forecasts.values
     
@@ -417,7 +417,7 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
     
     predictions_dict = {}
     dt1 = datetime.timedelta(days = 1)
-    dt2 = datetime.timedelta(days = 14)
+    dt2 = datetime.timedelta(days = 30)
     
     for code in codes:
 
@@ -454,27 +454,31 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
         for col in X.columns[:-3]:
             X[col] = X[col].astype(float)
         
-        
         # teraz przewidywać WIERSZ PO WIERSZU - DATA PO DACIE
         # po tym mogę użyć wartości przewidzianych i uzupełniać kolejne lagi i przewidywać kolejne wartości
 
-        for date in extra_dates:
+        for date_ in extra_dates:
             
-            row = X.loc[[date]]
+            row = X.loc[[date_]]
             
+            y_predicted_for_date = 0
             if model_type == 'xgboost':
                 y_predicted_for_date = model.predict(row)
             elif model_type == "arima":
+                
                 y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean
-
-            y_temp.loc[date] = y_predicted_for_date
+                
+                
+            y_temp.loc[date_] = y_predicted_for_date.values[0]
             
-            if date != extra_dates[-1]:
+            if date_ != extra_dates[-1]:
+                
                 for lag_col, lag in zip(lag_cols, [1,5,6,7]):
-                    colname = X.columns[lag_col]
-                    X.loc[date + dt1, colname] = y_temp.shift(lag).loc[date + dt1].values[0]
                     
-
+                    colname = X.columns[lag_col]
+                
+                    X.loc[date_ + dt1, colname] = y_temp.shift(lag).loc[date_ + dt1].values[0]
+                
         predictions_dict[code] = y_temp.loc[extra_dates]
         
         

@@ -26,7 +26,7 @@ def main():
     
     cv_scores_dict = ts_cross_val_score(df_dict, best_params_dict, "arima")
     
-    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing = False, model = "arima")
+    models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing = False, model_type = "arima")
     
     save_models_data_to_db(best_params_dict, cv_scores_dict, test_scores_dict, "arima")
 

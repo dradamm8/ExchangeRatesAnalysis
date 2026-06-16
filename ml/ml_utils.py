@@ -469,7 +469,7 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
         
         # teraz przewidywać WIERSZ PO WIERSZU - DATA PO DACIE
         # po tym mogę użyć wartości przewidzianych i uzupełniać kolejne lagi i przewidywać kolejne wartości
-
+        
         for date_ in extra_dates:
             
             row = X.loc[[date_]]
@@ -478,10 +478,11 @@ def predict_data(df_dict, models_dict, model_type = "xgboost"):
             if model_type == 'xgboost':
                 y_predicted_for_date = model.predict(row)
             elif model_type == "arima":
-                y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean
+                print(row.columns[np.isnan(row.values).flatten()])
+                y_predicted_for_date = model.get_forecast(exog = row, steps = 1).predicted_mean.values[0]
                 
                 
-            y_temp.loc[date_] = y_predicted_for_date.values[0]
+            y_temp.loc[date_] = y_predicted_for_date
             
             if date_ != extra_dates[-1]:
                 

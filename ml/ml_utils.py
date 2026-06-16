@@ -372,7 +372,7 @@ def predict_data(df_dict, models_dict):
                     X.loc[date + dt1, colname] = y_temp.shift(lag).loc[date + dt1].values[0]
                     
 
-        predictions_dict[code] = y_temp
+        predictions_dict[code] = y_temp.loc[extra_dates]
         
         
     return predictions_dict

@@ -96,6 +96,10 @@ def prepare_data(df):
 
     df_scaled = df_scaled.bfill()
 
+    df_scaled['month'] = df.index.month.astype("category")
+    df_scaled['day'] = df.index.day.astype("category")
+    df_scaled['quarter'] = df.index.quarter.astype("category")
+
     return df_scaled
 
 def get_features(df, code):
@@ -224,6 +228,7 @@ def train_models(df_dict, best_params_dict, train_existing = True):
     if not model_exists():
         create_directory_for_models(os.getenv("MODELS_DIR"))
     models_to_pickle(models_dict)
+
     return models_dict, test_scores_dict
 
 
@@ -262,7 +267,7 @@ def model_dict_from_pickle():
 
     for code in codes:
 
-        path = os.getenv("MODELS_DIR") + "_" + code + "_model.pkl"
+        path = os.getenv("MODELS_DIR") + code + "_model.pkl"
 
         with open(path, "rb") as f:
             model = pickle.load(f)
@@ -281,7 +286,7 @@ def predict_data(df_dict, models_dict):
         model = models_dict[code]
         
         last_date = curr_df.index[-1]
-        extra_dates = pd.date_range(last_date, last_date + timedelta(days = 14))
+        extra_dates = pd.date_range(last_date, last_date + datetime.timedelta(days = 14))
 
         temp_df = pd.DataFrame(index = extra_dates, columns = curr_df.columns)
 
@@ -296,8 +301,14 @@ def predict_data(df_dict, models_dict):
         for lag_col, lag in zip(lag_cols, [1,5,6,7]):
             X[lag_col] = y.shift(lag)
 
+
+        # print(X.iloc[:8])
+        # print("===========")
+        # print(temp_df.iloc[:8, :-3])
         # nany na końcu uzupełniamy tymi przesunięciami, a wcześniejsze - tym co było
-        X.iloc[:8] = temp_df.iloc[:8]
+        X.iloc[:8] = temp_df.iloc[:8, 1:]
+
+    
 
         # cechy czasowe
         X['month'] = X.index.month.astype("category")
@@ -305,8 +316,8 @@ def predict_data(df_dict, models_dict):
         X['quarter'] = X.index.quarter.astype("category")
 
         # reszta - interpolacja
-        X = X.interpolate()
-
+        X.iloc[:,:-3] = X.iloc[:,:-3].interpolate()
+        print(X)
         X_to_pred = X.loc[extra_dates]
 
         y_pred = model.predict(X_to_pred)

@@ -369,10 +369,8 @@ def predict_data(df_dict, models_dict):
             if date != extra_dates[-1]:
                 for lag_col, lag in zip(lag_cols, [1,5,6,7]):
                     colname = X.columns[lag_col]
-                    X.loc[date + dt, colname] = y_temp.shift(lag).loc[date + dt].values[0]
+                    X.loc[date + dt1, colname] = y_temp.shift(lag).loc[date + dt1].values[0]
                     
-            else:
-                print(X.iloc[-16:])
 
         predictions_dict[code] = y_temp
         

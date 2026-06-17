@@ -206,6 +206,8 @@ def inv_transform(df_dict, pred_dict, org_data):
     stds = org_data.std().values.flatten()
 
     inv_dict = {}
+    inv_old_data_dict = {}
+    inv_pred_dict = {}
     
     for m, s, code in zip(means, stds, codes):
         temp_pred = pred_dict[code]
@@ -215,8 +217,10 @@ def inv_transform(df_dict, pred_dict, org_data):
         temp = s * temp + m
 
         inv_dict[code] = temp
-
-    return inv_dict
+        inv_old_data_dict[code] = temp.loc[temp_df.index]
+        inv_pred_dict[code] = temp.loc[temp_pred.index]
+        
+    return inv_dict, inv_old_data_dict, inv_pred_dict
 
 
 def get_data_from_db():

@@ -12,7 +12,8 @@ def download_and_insert_to_db():
     date = datetime.today().date()
     date_str = date.strftime("%Y-%m-%d")
 
-    new_data = get_data_for_one_day(date_str)
+    
+    new_data = get_data(start_date_str, date_str)
 
     df_to_db(new_data)
 

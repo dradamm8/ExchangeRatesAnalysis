@@ -124,8 +124,8 @@ def download_data(start_date_str, end_date_str):
     
     date_format = "%Y-%m-%d"
 
-    start_date = datetime.strptime(start_date_str, date_format)
-    end_date = datetime.strptime(end_date_str, date_format)
+    start_date = datetime.datetime.strptime(start_date_str, date_format)
+    end_date = datetime.datetime.strptime(end_date_str, date_format)
 
     periods = make_date_chunks(start_date, end_date)
 
@@ -145,8 +145,8 @@ def download_data(start_date_str, end_date_str):
         except:
             if resp.status_code == 404:
                 # w przypadku, gdy na dany dzień nie ma danych, to pobieram z ostatniego tygodnia i interpolacja                
-                d1_temp = datetime.strptime(d1, date_format)
-                d2_temp = datetime.strptime(d2, date_format)
+                d1_temp = datetime.datetime.strptime(d1, date_format)
+                d2_temp = datetime.datetime.strptime(d2, date_format)
 
                 temp = weekly_interpolate(d1_temp, d2_temp)
 

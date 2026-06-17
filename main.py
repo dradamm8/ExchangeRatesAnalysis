@@ -5,34 +5,18 @@ import sys
 import datetime
 import warnings
 warnings.simplefilter(action='ignore')
+from dashboards.dashboards import *
 
-# mam pobieranie danych z API, dodawanie ich do bazy i pobieranie z bazy
-
-# przygotować model ML - niech zwraca predykcje na najbliższy tydzień
-# co tydzień - dotrenowywanie modelu przy użyciu danych z tygodnia
-
+# mam już wszystko jeśli chodzi o pobieranie i zapisywanie danych i modeli
+# teraz - dashboardy
 
 def main():
     
-    load_dotenv()
+    make_dashboard()
 
-    df = get_data_from_db()
     
-    df_to_ml = prepare_data(df)
-    
-    df_dict = make_df_dict(df_to_ml)
-    
-    models_dict = model_dict_from_pickle("arima")
 
-    # best_params_dict = grid_search_best_params(df_dict, "arima")
     
-    # cv_scores_dict = ts_cross_val_score(df_dict, best_params_dict, "arima")
-    
-    # models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing = False, model_type = "arima")
-    
-    # save_models_data_to_db(best_params_dict, cv_scores_dict, test_scores_dict, "arima")
-
-    print(predict_data(df_dict, models_dict, "arima"))
 
 if __name__ == "__main__":
     main()

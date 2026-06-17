@@ -23,6 +23,8 @@ schedule.every().day.at("13:30").do(download_and_insert_to_db)
 # trenowanie modeli
 def model_training():
 
+    load_dotenv()
+
     df = get_data_from_db()
 
     # xgboost

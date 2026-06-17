@@ -42,7 +42,7 @@ def model_training():
 
 
 # trenowanie co 2 tygodnie
-schedule.every(2).weeks.do(model_training)
+schedule.every(2).weeks.at("22:00").do(model_training)
 
 
 

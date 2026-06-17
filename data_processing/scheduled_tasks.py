@@ -9,8 +9,8 @@ import time
 # regularne pobieranie danych z API
 def download_and_insert_to_db():
 
-    date = datetime.today().date()
-    date_str = date.strftime("%Y-%m-%d")
+    date_today = datetime.date.today()
+    date_str = date_today.strftime("%Y-%m-%d")
 
     
     new_data = get_data(start_date_str, date_str)

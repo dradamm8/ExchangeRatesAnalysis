@@ -12,18 +12,18 @@ def make_dashboard():
     app = Dash()
 
     fig = make_subplots(rows=2, cols=3, subplot_titles = title_codes)
-        fig.update_layout(title = {'text': "Kursy walut"}, showlegend = False)
+    fig.update_layout(title = {'text': "Kursy walut"}, showlegend = False)
         
-        fig2 = go.Figure()
-        fig2.update_layout(title = {'text': "Wartości standaryzowane"})
-        
-        
-        fig3 = go.Figure()
-        fig3.update_layout(title = {'text': "Wartości procentowe względem 01.01.2022"})
+    fig2 = go.Figure()
+    fig2.update_layout(title = {'text': "Wartości standaryzowane"})
         
         
-        fig4 = make_subplots(rows=2, cols=3, subplot_titles = title_codes)
-        fig4.update_layout(title = {'text': "Wartości z ostatnich 3 miesięcy i przewidywane (model ARIMA)"}, showlegend = False)
+    fig3 = go.Figure()
+    fig3.update_layout(title = {'text': "Wartości procentowe względem 01.01.2022"})
+        
+        
+    fig4 = make_subplots(rows=2, cols=3, subplot_titles = title_codes)
+    fig4.update_layout(title = {'text': "Wartości z ostatnich 3 miesięcy i przewidywane (model ARIMA)"}, showlegend = False)
 
 
     app.layout = html.Div(children=[

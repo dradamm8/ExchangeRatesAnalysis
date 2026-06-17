@@ -185,10 +185,13 @@ def arima_grid_search(df_dict, cv):
                         X_test_cv = X_train.iloc[test_ix]
                         y_test_cv = y_train.iloc[test_ix]
 
+                        
                         model = ARIMA(y_train_cv, X_train_cv, order = order).fit()
                                         
                         y_pred_cv = model.get_forecast(exog = X_test_cv, steps = len(y_test_cv)).predicted_mean
-                            
+
+                        print(y_pred_cv)
+
                         rmse_arr.append(root_mean_squared_error(y_test_cv, y_pred_cv))
                         r2_arr.append(r2_score(y_test_cv, y_pred_cv))
 
@@ -213,11 +216,11 @@ def arima_grid_search(df_dict, cv):
     return best_params_dict
 
 
-def grid_search_best_params(df_dict, model = "xgboost"):
+def grid_search_best_params(df_dict, model_type = "xgboost"):
 
     tscv = TimeSeriesSplit(n_splits = 5)
     
-    if model == 'arima':
+    if model_type == 'arima':
         return arima_grid_search(df_dict, tscv)
 
     
@@ -346,7 +349,7 @@ def train_models(df_dict, best_params_dict, train_existing = True, model_type = 
 
 
 
-def get_ml_models_and_scores(df, curr_models_dict = None, model_type = "xgboost"):
+def get_ml_models_and_scores(df, train_existing = True, model_type = "xgboost"):
 
     
     # przygotowanie danych
@@ -355,17 +358,13 @@ def get_ml_models_and_scores(df, curr_models_dict = None, model_type = "xgboost"
     # słownik przechowujący dane dla różnych walut
     df_dict = make_df_dict(df_to_ml)
     
-    print(df_dict)
+    #print(df_dict)
 
     # GridSearch - najlepsze parametry
     best_params_dict = grid_search_best_params(df_dict, model_type = model_type)
 
     # kroswalidacja z najlepszymi parametrami
     cv_scores = ts_cross_val_score(df_dict, best_params_dict, model_type = model_type)
-
-    train_existing = True
-    if curr_models_dict is None:
-        train_existing = False
     
     # trenowanie modeli
     models_dict, test_scores_dict = train_models(df_dict, best_params_dict, train_existing, model_type)
@@ -406,7 +405,7 @@ def make_arima_forecasts(X, extra_dates):
     
     for col in X_for_training.columns[:-1]:
 
-        arima_model = ARIMA(X_for_training.loc[:,col], order = (2,2,1), enforce_stationarity = False).fit()
+        arima_model = ARIMA(X_for_training.loc[:,col], order = (2,2,1)).fit()
         forecasts = arima_model.get_forecast(steps = len(extra_dates)).predicted_mean
 
         X_final.loc[extra_dates, col] = forecasts.values

@@ -11,6 +11,10 @@ from database_connection.conn import *
 def make_dashboard():
     app = Dash()
 
+    title_codes = [*map(lambda x: x.upper() + '/PLN', codes)]
+    colors = [('blue', 'lightblue'), ('red', 'lightcoral'), ('green', 'lightgreen'), ('purple', 'mediumpurple'), 
+                ('darkorange', 'navajowhite'), ('deeppink', 'lightpink')]
+
     fig = make_subplots(rows=2, cols=3, subplot_titles = title_codes)
     fig.update_layout(title = {'text': "Kursy walut"}, showlegend = False)
         
@@ -51,7 +55,7 @@ def make_dashboard():
 
         dcc.Interval(
                 id='interval-component',
-                interval= 2*60*1000,
+                interval= 60*60*1000, #update co godzinę
                 n_intervals=0
             )
     ])
@@ -75,12 +79,7 @@ def make_dashboard():
         df_scaled = (df - df.mean()) / df.std()
         df_perc = df / df.iloc[0] * 100
         
-        inv_dict, inv_old_data_dict, inv_pred_dict = inv_transform(df_dict, pred_dict, df)
-
-        title_codes = [*map(lambda x: x.upper() + '/PLN', codes)]
-        colors = [('blue', 'lightblue'), ('red', 'lightcoral'), ('green', 'lightgreen'), ('purple', 'mediumpurple'), 
-                ('darkorange', 'navajowhite'), ('deeppink', 'lightpink')]
-        
+        inv_dict, inv_old_data_dict, inv_pred_dict = inv_transform(df_dict, pred_dict, df)      
         
         
         for code in codes:
@@ -110,5 +109,4 @@ def make_dashboard():
 
         return fig, fig2, fig3, fig4
     
-if __name__ == '__main__':
     app.run(debug=True, port = 8000)
